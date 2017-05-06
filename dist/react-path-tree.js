@@ -87,6 +87,10 @@ var _filter2 = __webpack_require__(123);
 
 var _filter3 = _interopRequireDefault(_filter2);
 
+var _noop2 = __webpack_require__(140);
+
+var _noop3 = _interopRequireDefault(_noop2);
+
 var _findIndex2 = __webpack_require__(34);
 
 var _findIndex3 = _interopRequireDefault(_findIndex2);
@@ -127,7 +131,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var blockProps = {
   width: 180,
-  height: 78,
+  height: 76,
   marginBottom: 16
 };
 var formatter = d3.format('.2f');
@@ -140,7 +144,6 @@ var sorter = function sorter(a, b) {
 };
 
 var flatData = function flatData(data) {
-  console.log('here');
   var res = [];
   function rec(node, pid, weightTotal) {
     var layer = node.layer,
@@ -161,7 +164,6 @@ var flatData = function flatData(data) {
       rate: formatter(weight * 100 / weightTotal) + '%',
       pid: pid
     });
-    console.log(weightTotal);
     var total = (0, _sum3.default)(children.map(function (c) {
       return c.weight;
     }));
@@ -170,11 +172,10 @@ var flatData = function flatData(data) {
     });
   }
   rec(data, 'root', data.weight);
-  console.log('here1');
   return res;
 };
-var lineGenerator = d3.line().curve(d3.curveCardinal);
 
+var lineFactory = d3.line().curve(d3.curveCatmullRom.alpha(0.90));
 var getOkIds = function getOkIds(min) {
   var res = [];
   for (var i = 1; i < min; i++) {
@@ -189,6 +190,15 @@ var getOkIds = function getOkIds(min) {
 
 var computeHeight = function computeHeight(height, marginBottom, index) {
   return (index + 0.5) * height + index * marginBottom;
+};
+
+var getRealIndex = function getRealIndex(ind, rightLength) {
+  if (rightLength < 9) return ind;
+  if (ind === rightLength - 1) {
+    return 7;
+  } else if (ind >= 6) {
+    return 6;
+  } else return ind;
 };
 
 var PathTree = function (_React$Component) {
@@ -224,17 +234,18 @@ var PathTree = function (_React$Component) {
           right = info.right;
 
       var leftId = (0, _find3.default)(activeNodeIds, function (d) {
-        return d.indexOf('layer' + left);
+        return d.includes('layer' + left);
       });
       var index0 = (0, _findIndex3.default)(data[left - 1], function (a) {
         return a.id === leftId;
       });
       var rightId = (0, _find3.default)(activeNodeIds, function (d) {
-        return d.indexOf('layer' + right);
+        return d.includes('layer' + right);
       });
       var index1 = (0, _findIndex3.default)(data[right - 1], function (a) {
         return a.id === rightId;
       });
+      index1 = getRealIndex(index1, data[right - 1].length);
 
       var width = blockProps.width,
           height = blockProps.height,
@@ -244,12 +255,20 @@ var PathTree = function (_React$Component) {
       var rightLength = data[right - 1].length;
       rightLength = rightLength > 8 ? 8 : rightLength;
       var dataArray = new Array(rightLength).fill(0).map(function (n, i) {
-        return [startPoint, [width, computeHeight(height, marginBottom, i)]];
+        var target = [width, computeHeight(height, marginBottom, i)];
+        return [startPoint, [target[0] - 5, target[1]], target];
       });
+      var hasLeave = (0, _find3.default)(data[right - 1], { type: 0 });
 
-      d3.select('#' + id).selectAll('svg').remove();
-      dataArray.forEach(function (points) {
-        d3.select('#' + id).append('svg').append('path').attr('d', lineGenerator(points)).enter();
+      d3.select('#' + id + ' svg').selectAll('path').remove();
+      dataArray.forEach(function (points, ind) {
+        var stoke = ind === index1 ? '#d4b9ff' : '#f0f0f0';
+        if (hasLeave && ind === rightLength - 1) {
+          stoke = '#fff2e5';
+        }
+        var stokeWidth = ind !== index1 ? 5 : 3;
+
+        d3.select('#' + id + ' .pt-svg').append('path').datum(points).attr('fill', 'rgba(0,0,0,0)').attr('stroke', stoke).attr('stroke-width', stokeWidth).attr('d', lineFactory(points)).enter();
       });
     };
 
@@ -259,13 +278,23 @@ var PathTree = function (_React$Component) {
           marginBottom = blockProps.marginBottom;
 
       var h = height * 8 + 7 * marginBottom;
-      return _react2.default.createElement('div', { className: 'pa-svg', id: 'svg-' + (i + 1) + '-' + (i + 2) });
+      return _react2.default.createElement(
+        'div',
+        { className: 'pt-svg-wrapper', id: 'svg-' + (i + 1) + '-' + (i + 2) },
+        _react2.default.createElement('svg', { className: 'pt-svg' })
+      );
     };
 
-    _this.renderNode = function (node) {
-      var i = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'last';
+    _this.onClickNode = function (node) {
+      return function () {
+        var layer = node.layer,
+            id = node.id;
+      };
+    };
 
+    _this.renderNode = function (node, i) {
       if (!node) return null;
+      var activeNodeIds = _this.state.activeNodeIds;
       var rate = node.rate,
           pageName = node.pageName,
           weight = node.weight,
@@ -276,9 +305,10 @@ var PathTree = function (_React$Component) {
 
       var active = _this.state.activeNodeIds.includes(id);
       var key = i + '@' + id;
-      var title = type === 0 ? '离开' : pageName;
-      var cls = 'pa-node ' + (active ? 'active' : 'not-active');
-      return _this.renderNodeDom(key, cls, pageName, rate, weight);
+      var title = i === 'leave' ? '离开' : pageName;
+      var cls = 'pt-node pt-node-' + i + ' ' + (active ? 'active' : 'not-active');
+      var onClick = activeNodeIds.includes(id) ? _noop3.default : _this.onClickNode(node);
+      return _this.renderNodeDom(key, cls, title, rate, weight);
     };
 
     _this.renderOther = function (rest, totalWeight, flat) {
@@ -287,31 +317,33 @@ var PathTree = function (_React$Component) {
         return prev + curr.weight;
       }, 0);
       var rate = formatter(weight * 100 / totalWeight) + '%';
-      return _this.render('pa-node-other', 'pa-node', '其他', rate, weight);
+      return _this.renderNodeDom('pt-node-other', 'pt-node', '其他', rate, weight, _noop3.default);
     };
 
-    _this.renderNodeDom = function (key, cls, pageName, rate, weight) {
+    _this.renderNodeDom = function (key, cls, pageName, rate, weight, onClick) {
       return _react2.default.createElement(
         'div',
-        { className: cls, key: key },
+        {
+          className: cls,
+          key: key,
+          onClick: onClick,
+          title: pageName
+        },
         _react2.default.createElement(
           'h3',
-          null,
+          { className: 'elli' },
           pageName
         ),
         _react2.default.createElement(
           'p',
-          null,
-          rate
+          { className: 'elli' },
+          rate,
+          ' (\u4F1A\u8BDD\u6570',
+          weight,
+          ')'
         ),
-        _react2.default.createElement(
-          'div',
-          null,
-          '\u4F1A\u8BDD\u6570',
-          weight
-        ),
-        _react2.default.createElement('div', { className: 'pa-node-output' }),
-        _react2.default.createElement('div', { className: 'pa-node-input' })
+        _react2.default.createElement('div', { className: 'pt-node-output' }),
+        _react2.default.createElement('div', { className: 'pt-node-input' })
       );
     };
 
@@ -332,8 +364,6 @@ var PathTree = function (_React$Component) {
       var totalWeight = (0, _sum3.default)(arr.map(function (s) {
         return s.weight;
       }));
-      console.log('here3');
-      //debugger
       return _react2.default.createElement(
         'div',
         { className: 'pt-layer', key: 'pt-layer' + i },
@@ -342,7 +372,7 @@ var PathTree = function (_React$Component) {
           { className: 'pt-nodes' },
           top6.map(_this.renderNode),
           _this.renderOther(rest, totalWeight),
-          _this.renderNode(leave, 'last')
+          _this.renderNode(leave, 'leave')
         ),
         _this.renderSvg(i)
       );
@@ -374,7 +404,6 @@ var PathTree = function (_React$Component) {
     value: function render() {
       var data = this.state.data;
 
-      console.log('here2');
       return _react2.default.createElement(
         'div',
         { className: 'path-tree-wrapper' },
@@ -21438,6 +21467,32 @@ module.exports = g;
 /***/ (function(module, exports) {
 
 module.exports = __WEBPACK_EXTERNAL_MODULE_136__;
+
+/***/ }),
+/* 137 */,
+/* 138 */,
+/* 139 */,
+/* 140 */
+/***/ (function(module, exports) {
+
+/**
+ * This method returns `undefined`.
+ *
+ * @static
+ * @memberOf _
+ * @since 2.3.0
+ * @category Util
+ * @example
+ *
+ * _.times(2, _.noop);
+ * // => [undefined, undefined]
+ */
+function noop() {
+  // No operation performed.
+}
+
+module.exports = noop;
+
 
 /***/ })
 /******/ ]);

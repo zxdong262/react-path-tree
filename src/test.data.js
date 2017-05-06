@@ -8,7 +8,7 @@ function divide(total, count) {
       return prev
     }
     let rest = total - used
-    let curr = Math.floor(_.random(rest * 0.95 / count, rest / count))
+    let curr = Math.floor(_.random(rest * 0.8 / count, rest / count))
     used += curr
     prev.push(curr)
     return prev
@@ -18,7 +18,7 @@ function divide(total, count) {
 function genData(level = 6) {
   function rec(node, i) {
     if(i > 5) return node
-    let count = _.random(3, 9)
+    let count = _.random(10, 12)
     let weights = divide(node.weight, count)
     node.children = new Array(count).fill(0).map((x, index) => {
       let n = {

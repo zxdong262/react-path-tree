@@ -4,7 +4,7 @@ import _ from 'lodash'
 import * as d3 from 'd3'
 const blockProps = {
   width: 180,
-  height: 78,
+  height: 76,
   marginBottom: 16
 }
 const formatter = d3.format('.2f')
@@ -17,7 +17,6 @@ const sorter = (a, b) => {
 }
 
 const flatData = data => {
-  console.log('here')
   let res = []
   function rec (node, pid, weightTotal) {
     let {layer, pageName, weight, children, type} = node
@@ -33,16 +32,14 @@ const flatData = data => {
       rate: formatter(weight * 100 / weightTotal) + '%',
       pid
     })
-    console.log(weightTotal)
     let total = _.sum(children.map(c => c.weight))
     if(children.length) children.sort(sorter).forEach(c => rec(c, id, total))
   }
   rec(data, 'root', data.weight)
-  console.log('here1')
   return res
 }
-const lineGenerator = d3.line().curve(d3.curveCardinal)
 
+const lineFactory = d3.line().curve(d3.curveCatmullRom.alpha(0.90))
 const getOkIds = min => {
   let res = []
   for (let i = 1; i < min;i ++) {
@@ -57,6 +54,15 @@ const getOkIds = min => {
 
 const computeHeight = (height, marginBottom, index) => {
   return (index + 0.5) * height + index * marginBottom
+}
+
+const getRealIndex = (ind, rightLength) => {
+  if (rightLength < 9) return ind
+  if( ind === rightLength - 1) {
+    return 7
+  } else if (ind >= 6) {
+    return 6
+  } else return ind
 }
 
 class PathTree extends React.Component {
@@ -108,29 +114,45 @@ class PathTree extends React.Component {
   updateSvgDom = info => {
     let {data, activeNodeIds} = this.state
     let {id, left, right} = info
-    let leftId = _.find(activeNodeIds, d => d.indexOf(`layer${left}`))
+    let leftId = _.find(activeNodeIds, d => d.includes(`layer${left}`))
     let index0 = _.findIndex(data[left - 1], a => a.id === leftId)
-    let rightId = _.find(activeNodeIds, d => d.indexOf(`layer${right}`))
+    let rightId = _.find(activeNodeIds, d => d.includes(`layer${right}`))
     let index1 = _.findIndex(data[right - 1], a => a.id === rightId)
+    index1 = getRealIndex(index1, data[right - 1].length)
 
     let {width, height, marginBottom} = blockProps
     let startPoint = [0, computeHeight(height, marginBottom, index0)]
     let rightLength = data[right - 1].length
     rightLength = rightLength > 8 ? 8 : rightLength
     let dataArray = new Array(rightLength).fill(0).map((n ,i) => {
+      let target = [width, computeHeight(height, marginBottom, i)]
       return [
         startPoint,
-        [width, computeHeight(height, marginBottom, i)]
+        [target[0] - 5, target[1]],
+        target
       ]
     })
+    let hasLeave = _.find(data[right - 1], {type: 0})
 
-    d3.select(`#${id}`).selectAll('svg').remove()
-    dataArray.forEach(points => {
-      d3
-      .select(`#${id}`)
-      .append('svg')
+    d3.select(`#${id} svg`).selectAll('path').remove()
+    dataArray.forEach((points, ind) => {
+      let stoke = ind === index1
+        ? '#d4b9ff'
+        : '#f0f0f0'
+      if (hasLeave && ind === rightLength - 1) {
+        stoke = '#fff2e5'
+      }
+      let stokeWidth = ind !== index1
+        ? 5
+        : 3
+
+      d3.select(`#${id} .pt-svg`)
       .append('path')
-      .attr('d', lineGenerator(points))
+      .datum(points)
+      .attr('fill', 'rgba(0,0,0,0)')
+      .attr('stroke', stoke)
+      .attr('stroke-width', stokeWidth)
+      .attr('d', lineFactory(points))
       .enter()
     })
 
@@ -140,21 +162,32 @@ class PathTree extends React.Component {
     let {width, height, marginBottom} = blockProps
     let h = height * 8 + 7 * marginBottom
     return (
-      <div className="pa-svg" id={`svg-${i + 1}-${i + 2}`} />
-
+      <div className="pt-svg-wrapper" id={`svg-${i + 1}-${i + 2}`}>
+        <svg className="pt-svg" />
+      </div>
     )
   }
 
-  renderNode = (node, i = 'last') => {
+  onClickNode = node => {
+    return () => {
+      let {layer, id} = node
+    }
+  }
+
+  renderNode = (node, i) => {
     if (!node) return null
+    let {activeNodeIds} = this.state
     let {rate, pageName, weight, id, pid, type, layer} = node
     let active = this.state.activeNodeIds.includes(id)
     let key = i + '@' + id
-    let title = type === 0
+    let title = i === 'leave'
       ? '离开'
       : pageName
-    let cls = `pa-node ${active ? 'active' : 'not-active'}`
-    return this.renderNodeDom(key, cls, pageName, rate, weight)
+    let cls = `pt-node pt-node-${i} ${active ? 'active' : 'not-active'}`
+    let onClick = activeNodeIds.includes(id)
+      ? _.noop
+      : this.onClickNode(node)
+    return this.renderNodeDom(key, cls, title, rate, weight)
   }
 
   renderOther = (rest, totalWeight, flat) => {
@@ -163,17 +196,24 @@ class PathTree extends React.Component {
       return prev + curr.weight
     }, 0)
     let rate = formatter(weight * 100 / totalWeight) + '%'
-    return this.render('pa-node-other', 'pa-node', '其他', rate, weight)
+    return this.renderNodeDom(
+      'pt-node-other', 'pt-node',
+      '其他', rate, weight, _.noop
+    )
   }
 
-  renderNodeDom = (key, cls, pageName, rate, weight) => {
+  renderNodeDom = (key, cls, pageName, rate, weight, onClick) => {
     return (
-      <div className={cls} key={key}>
-        <h3>{pageName}</h3>
-        <p>{rate}</p>
-        <div>会话数{weight}</div>
-        <div className="pa-node-output"></div>
-        <div className="pa-node-input"></div>
+      <div
+        className={cls}
+        key={key}
+        onClick={onClick}
+        title={pageName}
+      >
+        <h3 className="elli">{pageName}</h3>
+        <p className="elli">{rate} (会话数{weight})</p>
+        <div className="pt-node-output"></div>
+        <div className="pt-node-input"></div>
       </div>
     )
   }
@@ -194,14 +234,12 @@ class PathTree extends React.Component {
     let top6 = filtered.slice(0, 6)
     let rest = filtered.slice(6, len)
     let totalWeight = _.sum(arr.map(s => s.weight))
-    console.log('here3')
-    //debugger
     return (
       <div className="pt-layer" key={`pt-layer${i}`}>
         <div className="pt-nodes">
           {top6.map(this.renderNode)}
           {this.renderOther(rest, totalWeight)}
-          {this.renderNode(leave, 'last')}
+          {this.renderNode(leave, 'leave')}
         </div>
         {this.renderSvg(i)}
       </div>
@@ -210,7 +248,6 @@ class PathTree extends React.Component {
 
   render () {
     let {data} = this.state
-    console.log('here2')
     return (
       <div className="path-tree-wrapper">
         {data.map(this.nodeRender)}

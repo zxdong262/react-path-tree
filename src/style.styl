@@ -1,4 +1,67 @@
-.pa-node
-  width 180px
-  height 78px
+.pt-node
+  width 178px
+  height 76px
   margin-bottom 16px
+  background: #f9f3ff
+  border 1px solid #eee8f6
+  padding 10px 20px
+  position: relative
+  color #634386
+  cursor pointer
+  &:hover, &.active
+    background: #ebdbff
+    .pt-node-input
+      background: #aa6ffb
+  h3
+    margin 0
+    font-size: 16px
+    padding 10px 0
+  p
+    font-size: 13px
+.pt-node-leave
+  background: #f4f4f4
+  &:hover
+    background: #f4f4f4
+    cursor: default
+
+.pt-node-output
+  width 14px
+  height 14px
+  border-radius: 14px
+  border 1px solid #e9e1f6
+  position: absolute
+  right -7px
+  top 50%
+  margin-top -7px
+  z-index 20
+  background: #e7d6ff
+.pt-node-input
+  width 8px
+  height 24px
+  border 1px solid #e9e1f6
+  position: absolute
+  left -5px
+  top 50%
+  background: #e7d6ff
+  margin-top -12px
+  z-index 20
+.pt-layer
+  float: left
+  width 360px
+  height 1566px
+  position: relative
+.pt-nodes
+  width 180px
+.pt-svg-wrapper
+  position: absolute
+  left 180px
+  width 180px
+  top 0
+.pt-svg
+  position: absolute
+  left 0
+  top 0
+  width 180px
+  height 1566px
+.path-tree-wrapper
+  margin-top 40px

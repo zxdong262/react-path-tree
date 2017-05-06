@@ -7,5 +7,5 @@
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
       
-.pa-node{width:180px;height:78px;margin-bottom:16px}
+.pt-node{width:178px;height:76px;margin-bottom:16px;background:#f9f3ff;border:1px solid #eee8f6;padding:10px 20px;position:relative;color:#634386;cursor:pointer}.pt-node.active,.pt-node:hover{background:#ebdbff}.pt-node.active .pt-node-input,.pt-node:hover .pt-node-input{background:#aa6ffb}.pt-node h3{margin:0;font-size:16px;padding:10px 0}.pt-node p{font-size:13px}.pt-node-leave{background:#f4f4f4}.pt-node-leave:hover{background:#f4f4f4;cursor:default}.pt-node-output{width:14px;height:14px;border-radius:14px;right:-7px;margin-top:-7px}.pt-node-input,.pt-node-output{border:1px solid #e9e1f6;position:absolute;top:50%;z-index:20;background:#e7d6ff}.pt-node-input{width:8px;height:24px;left:-5px;margin-top:-12px}.pt-layer{float:left;width:360px;height:1566px;position:relative}.pt-nodes{width:180px}.pt-svg-wrapper{left:180px}.pt-svg,.pt-svg-wrapper{position:absolute;width:180px;top:0}.pt-svg{left:0;height:1566px}.path-tree-wrapper{margin-top:40px}
 /*# sourceMappingURL=react-path-tree.min.css.map*/
