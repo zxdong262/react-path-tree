@@ -15,10 +15,10 @@ function divide(total, count) {
   }, [])
 }
 
-function genData(level = 6) {
+function genData(level = 5) {
   function rec(node, i) {
-    if(i > 5) return node
-    let count = _.random(10, 12)
+    if(i > 4) return node
+    let count = _.random(4, 12)
     let weights = divide(node.weight, count)
     node.children = new Array(count).fill(0).map((x, index) => {
       let n = {

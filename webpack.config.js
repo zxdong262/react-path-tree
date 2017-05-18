@@ -22,7 +22,9 @@ let config = {
   watch: true,
   externals: {
     'react': 'React',
-    'react-dom': 'ReactDOM'
+    'react-dom': 'ReactDOM',
+    'd3': 'd3',
+    'lodash': 'lodash'
   },
   module: {
     rules: [
