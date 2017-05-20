@@ -32,8 +32,7 @@ const flatData = data => {
       type,
       rate: formatter((rate || 1) * 100) + '%',
       originalRate: rate,
-      pid,
-      userIds
+      pid
     })
     if(children.length) children.sort(sorter).forEach((c, i) => rec(c, id, i))
   }
